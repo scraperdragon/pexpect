@@ -388,7 +388,7 @@ class spawn(object):
 
             child = pexpect.spawn('some_command')
             child.logfile_read = sys.stdout
-        
+
         Remember to use spawnu instead of spawn for the above code if you are
         using Python 3.
 
@@ -1460,16 +1460,16 @@ class spawn(object):
                 print p.before
 
         If you are trying to optimize for speed then see expect_list().
-        
+
         On Python 3.4, or Python 3.3 with asyncio installed, passing
         ``async=True``  will make this return an :mod:`asyncio` coroutine,
         which you can yield from to get the same result that this method would
         normally give directly. So, inside a coroutine, you can replace this code::
-        
+
             index = p.expect(patterns)
-        
+
         With this non-blocking form::
-        
+
             index = yield from p.expect(patterns, async=True)
         '''
 
@@ -1516,7 +1516,7 @@ class spawn(object):
 
         This method is also useful when you don't want to have to worry about
         escaping regular expression characters that you want to match.
-        
+
         Like :meth:`expect`, passing ``async=True`` will make this return an
         asyncio coroutine.
         '''
@@ -1656,7 +1656,7 @@ class spawn(object):
         '''
 
         while self.isalive():
-            r, w, e = self.__select([self.child_fd, self.STDIN_FILENO], [], [])
+            r, w, e = self.__select([self.child_fd, self.STDIN_FILENO], [], [], 0)
             if self.child_fd in r:
                 try:
                     data = self.__interact_read(self.child_fd)
@@ -1674,16 +1674,20 @@ class spawn(object):
                     self.logfile.write(data)
                     self.logfile.flush()
                 os.write(self.STDOUT_FILENO, data)
+            read_data = None
             if self.STDIN_FILENO in r:
-                data = self.__interact_read(self.STDIN_FILENO)
+                read_data = self.__interact_read(self.STDIN_FILENO)
+            if r == []:
+                read_data = ''
+            if read_data is not None:
                 if input_filter:
-                    data = input_filter(data)
-                i = data.rfind(escape_character)
+                    read_data = input_filter(read_data)
+                i = read_data.rfind(escape_character)
                 if i != -1:
-                    data = data[:i]
-                    self.__interact_writen(self.child_fd, data)
+                    read_data = read_data[:i]
+                    self.__interact_writen(self.child_fd, read_data)
                     break
-                self.__interact_writen(self.child_fd, data)
+                self.__interact_writen(self.child_fd, read_data)
 
     def __select(self, iwtd, owtd, ewtd, timeout=None):
 
@@ -1984,7 +1988,7 @@ class searcher_re(object):
 
 def is_executable_file(path):
     """Checks that path is an executable regular file (or a symlink to a file).
-    
+
     This is roughly ``os.path isfile(path) and os.access(path, os.X_OK)``, but
     on some platforms :func:`os.access` gives us the wrong answer, so this
     checks permission bits directly.
