@@ -658,7 +658,7 @@ class spawn(object):
 
             # set default window size of 24 rows by 80 columns
             try:
-                self.setwinsize(24, 80)
+                self.setwinsize(25, 80)
             except IOError as err:
                 if err.args[0] not in (errno.EINVAL, errno.ENOTTY):
                     raise
@@ -687,7 +687,7 @@ class spawn(object):
 
         # Parent
         try:
-            self.setwinsize(24, 80)
+            self.setwinsize(25, 80)
         except IOError as err:
             if err.args[0] not in (errno.EINVAL, errno.ENOTTY):
                 raise
