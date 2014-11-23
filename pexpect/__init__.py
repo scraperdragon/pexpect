@@ -497,7 +497,7 @@ class spawn(object):
         self.delayafterclose = 0.1
         # Used by terminate() to give kernel time to update process status.
         # Time in seconds.
-        self.delayafterterminate = 0.1
+        self.delayafterterminate = 1.0
         self.softspace = False
         self.name = '<' + repr(self) + '>'
         self.closed = True
@@ -1183,45 +1183,58 @@ class spawn(object):
         return self.flag_eof
 
     def terminate(self, force=False):
+        '''
+        Terminate the child process.
 
-        '''This forces a child process to terminate. It starts nicely with
-        SIGHUP and SIGINT. If "force" is True then moves onto SIGKILL. This
-        returns True if the child was terminated. This returns False if the
-        child could not be terminated. '''
+        After each signal, a duration of up to ``self.delayafterterminate``
+        is allowed to elapse before checking if the child process has yet
+        terminated, returning ``True`` immediately once it has.  If the
+        process could not be terminated, ``False`` is returned.
 
-        if not self.isalive():
-            return True
-        try:
-            self.kill(signal.SIGHUP)
-            time.sleep(self.delayafterterminate)
-            if not self.isalive():
-                return True
-            self.kill(signal.SIGCONT)
-            time.sleep(self.delayafterterminate)
-            if not self.isalive():
-                return True
-            self.kill(signal.SIGINT)
-            time.sleep(self.delayafterterminate)
-            if not self.isalive():
-                return True
-            if force:
-                self.kill(signal.SIGKILL)
-                time.sleep(self.delayafterterminate)
-                if not self.isalive():
-                    return True
-                else:
-                    return False
-            return False
-        except OSError:
-            # I think there are kernel timing issues that sometimes cause
-            # this to happen. I think isalive() reports True, but the
-            # process is dead to the kernel.
-            # Make one last attempt to see if the kernel is up to date.
-            time.sleep(self.delayafterterminate)
-            if not self.isalive():
-                return True
-            else:
-                return False
+        If argument ``ignore_sighup=False`` was used with :meth:`spawn`,
+        then SIGHUP is sent, followed by SIGCONT to resume a process that
+        may have received  SIGSTOP (^Z).  Then SIGINT (KeyboardInterrupt, ^C)
+        is sent to terminate the process and later SIGTERM.  Finally, when
+        ``force=True`` the uninterruptable signal SIGKILL (kill -9) is sent.
+        '''
+        # http://www.gnu.org/software/libc/manual/html_node/Termination-Signals.html
+        #
+        # signals[] is a list of signals to send in series, and
+        # whether or not we should await termination after it is sent.
+        signals = []
+        if not self.ignore_sighup:
+            signals.append((signal.SIGHUP, True))
+        signals.extend([(signal.SIGCONT, False),
+                        (signal.SIGINT, True),
+                        (signal.SIGTERM, True)])
+        if force:
+            signals.append((signal.SIGKILL, True))
+
+        # timeleft determines whether self.delayafterterminate has
+        # elapsed since start_time.
+        timeleft = lambda start_time: (
+            time.time() - start_time < self.delayafterterminate)
+
+        should_wait = True
+        while self.isalive():
+            try:
+                signal_num, should_wait = signals.pop(0)
+                self.kill(signal_num)
+            except IndexError:
+                # out of signals to send,
+                break
+            except OSError:
+                # A rare timing condition where isalive() returned False,
+                # but the child process no longer exists to accept a
+                # signal.  We expect to return True on next loop after
+                # a delay for the kernel's process table to settle.
+                should_wait = True
+            if should_wait:
+                stime = time.time()
+                while self.isalive() and timeleft(stime):
+                    time.sleep(0.1)
+        # returns True if child process has terminated.
+        return not self.isalive()
 
     def wait(self):
 
