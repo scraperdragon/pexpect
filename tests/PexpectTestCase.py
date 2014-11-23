@@ -22,6 +22,7 @@ from __future__ import print_function
 
 import contextlib
 import unittest
+import signal
 import sys
 import os
 
@@ -32,14 +33,32 @@ class PexpectTestCase(unittest.TestCase):
         tests_dir = os.path.dirname(__file__)
         self.project_dir = project_dir = os.path.dirname(tests_dir)
         os.chdir(tests_dir)
+        self.pid = os.getpid()
         os.environ['COVERAGE_PROCESS_START'] = os.path.join(project_dir, '.coveragerc')
         os.environ['COVERAGE_FILE'] = os.path.join(project_dir, '.coverage')
         print('\n', self.id(), end=' ')
         sys.stdout.flush()
+
+        # If the test runner has chosen to ignore SIGHUP (as on Fedora's
+        # build machines), we must temporarily set it for the default handler
+        # for our test cases.  We will restore ignoring SIGHUP on tearDown.
+        self.restore_sig_ign = (
+            signal.getsignal(signal.SIGHUP) == signal.SIG_IGN)
+        if self.restore_sig_ign:
+            signal.signal(signal.SIGHUP, signal.SIG_DFL)
+            self.restore_sig_ign = True
+
         unittest.TestCase.setUp(self)
 
     def tearDown(self):
         os.chdir (self.original_path)
+        if self.restore_sig_ign:
+            # return ignoring signal handler for our test runner
+            signal.signal(signal.SIGHUP, signal.SIG_IGN)
+
+        if self.pid != os.getpid():
+            print('Test runner has forked! Exiting', file=sys.stderr)
+            sys.exit(1)
 
     if sys.version_info < (2,7):
         # We want to use these methods, which are new/improved in 2.7, but

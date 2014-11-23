@@ -21,8 +21,6 @@ PEXPECT LICENSE
 import unittest
 import sys
 import re
-import signal
-import time
 import tempfile
 import os
 
@@ -141,65 +139,6 @@ class TestCaseMisc(PexpectTestCase.PexpectTestCase):
         with self.assertRaises(pexpect.EOF):
             child.expect('the unexpected')
 
-    def test_terminate(self):
-        " test force terminate always succeeds (SIGKILL). "
-        child = pexpect.spawn('cat')
-        child.terminate(force=1)
-        assert child.terminated
-
-    def test_sighup(self):
-        " validate argument `ignore_sighup=True` and `ignore_sighup=False`. "
-        # If a parent process sets an Ignore handler for SIGHUP (as on Fedora's
-        # build machines), this test breaks. We temporarily restore the default
-        # handler, so the child process will quit. However, we can't simply
-        # replace any installed handler, because getsignal returns None for
-        # handlers not set in Python code, so we wouldn't be able to restore
-        # them.
-        if signal.getsignal(signal.SIGHUP) == signal.SIG_IGN:
-            signal.signal(signal.SIGHUP, signal.SIG_DFL)
-            restore_sig_ign = True
-        else:
-            restore_sig_ign = False
-
-        getch = sys.executable + ' getch.py'
-        try:
-            child = pexpect.spawn(getch, ignore_sighup=True)
-            child.expect('READY')
-            child.kill(signal.SIGHUP)
-            for _ in range(10):
-                if not child.isalive():
-                    self.fail('Child process should not have exited.')
-                time.sleep(0.1)
-
-            child = pexpect.spawn(getch, ignore_sighup=False)
-            child.expect('READY')
-            child.kill(signal.SIGHUP)
-            for _ in range(10):
-                if not child.isalive():
-                    break
-                time.sleep(0.1)
-            else:
-                self.fail('Child process should have exited.')
-
-        finally:
-            if restore_sig_ign:
-                signal.signal(signal.SIGHUP, signal.SIG_IGN)
-
-    def test_bad_child_pid(self):
-        " assert bad condition error in isalive(). "
-        expect_errmsg = re.escape("isalive() encountered condition where ")
-        child = pexpect.spawn('cat')
-        child.terminate(force=1)
-        # Force an invalid state to test isalive
-        child.terminated = 0
-        try:
-            with self.assertRaisesRegexp(pexpect.ExceptionPexpect,
-                                         ".*" + expect_errmsg):
-                child.isalive()
-        finally:
-            # Force valid state for child for __del__
-            child.terminated = 1
-
     def test_bad_arguments_suggest_fdpsawn(self):
         " assert custom exception for spawn(int). "
         expect_errmsg = "maybe you want to use fdpexpect.fdspawn"
@@ -239,14 +178,6 @@ class TestCaseMisc(PexpectTestCase.PexpectTestCase):
             p = pexpect.spawn('cat')
             p.close()
             p.readlines()
-
-    def test_isalive(self):
-        " check isalive() before and after EOF. (True, False) "
-        child = pexpect.spawn('cat')
-        assert child.isalive() is True
-        child.sendeof()
-        child.expect(pexpect.EOF)
-        assert child.isalive() is False
 
     def test_bad_type_in_expect(self):
         " expect() does not accept dictionary arguments. "
