@@ -1325,11 +1325,6 @@ class spawn(object):
             self.exitstatus = None
             self.signalstatus = os.WTERMSIG(status)
             self.terminated = True
-        elif os.WIFSTOPPED(status):
-            raise ExceptionPexpect('isalive() encountered condition ' +
-                    'where child process is stopped. This is not ' +
-                    'supported. Is some other process attempting ' +
-                    'job control with our child pid?')
         return False
 
     def kill(self, sig):
