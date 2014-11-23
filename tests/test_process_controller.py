@@ -61,7 +61,7 @@ class WaitTestCase(PexpectTestCase.PexpectTestCase):
         expected_exception = pexpect.ExceptionPexpect
 
         # exercise,
-        proc = pexpect.spawn(given_command)
+        proc = pexpect.spawn(given_command, echo=False)
         proc.sendline(given_expect_pattern)
         proc.expect(given_expect_pattern)
         proc.kill(signal.SIGKILL) # kill -9
@@ -148,7 +148,7 @@ class IsAliveTestCase(PexpectTestCase.PexpectTestCase):
         expected_alive = False
 
         # exercise,
-        proc = pexpect.spawn(given_command)
+        proc = pexpect.spawn(given_command, echo=False)
         proc.sendline(given_expect_pattern)
         proc.expect(given_expect_pattern)
         proc.kill(9)
@@ -169,7 +169,7 @@ class IsAliveTestCase(PexpectTestCase.PexpectTestCase):
         expected_terminated = False
 
         # exercise,
-        proc = pexpect.spawn(given_command)
+        proc = pexpect.spawn(given_command, echo=False)
         proc.sendline(given_expect_pattern)
         proc.expect(given_expect_pattern)
         proc.kill(signal.SIGHUP)
@@ -207,7 +207,7 @@ class TerminateTestCase(PexpectTestCase.PexpectTestCase):
         expected_signalstatuses = (signal.SIGINT,)
 
         # exercise,
-        proc = pexpect.spawn(given_command)
+        proc = pexpect.spawn(given_command, echo=False)
         proc.sendline(given_expect_pattern)
         proc.expect(given_expect_pattern)
         termination_result = proc.terminate()
@@ -255,7 +255,7 @@ class TerminateTestCase(PexpectTestCase.PexpectTestCase):
         expected_signalstatuses = (signal.SIGHUP,)
 
         # exercise,
-        proc = pexpect.spawn(given_command, ignore_sighup=False)
+        proc = pexpect.spawn(given_command, ignore_sighup=False, echo=False)
         proc.sendline(given_expect_pattern)
         proc.expect(given_expect_pattern)
         termination_result = proc.terminate()
@@ -276,7 +276,7 @@ class TerminateTestCase(PexpectTestCase.PexpectTestCase):
         expected_signalstatuses = (signal.SIGINT,)
 
         # exercise,
-        proc = pexpect.spawn(given_command)
+        proc = pexpect.spawn(given_command, echo=False)
         proc.sendline(given_expect_pattern)
         proc.expect(given_expect_pattern)
         termination_result = proc.terminate(force=True)
