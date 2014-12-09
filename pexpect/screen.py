@@ -83,7 +83,7 @@ class screen:
         self.encoding = encoding
         self.encoding_errors = encoding_errors
         if encoding is not None:
-            self.decoder = codecs.getincrementaldecoder(encoding)(encoding_errors)            
+            self.decoder = codecs.getincrementaldecoder(encoding)(encoding_errors)
         else:
             self.decoder = None
         self.cur_r = 1
@@ -275,6 +275,10 @@ class screen:
         self.cur_r = r
         self.cur_c = c
         self.cursor_constrain ()
+
+    def cursor_set_horizontal (self, c): # <ESC>[{COL}G
+        self.cur_c = c
+        self.cursor.constrain ()
 
     def cursor_back (self,count=1): # <ESC>[{COUNT}D (not confused with down)
 

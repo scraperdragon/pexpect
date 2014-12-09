@@ -97,6 +97,12 @@ def DoUp (fsm):
     screen = fsm.memory[0]
     screen.cursor_up (count)
 
+def DoHoriz (fsm):
+
+    count = int(fsm.memory.pop())
+    screen = fsm.memory[0]
+    screen.cursor_set_horizontal (count)
+
 def DoHome (fsm):
 
     c = int(fsm.memory.pop())
@@ -231,6 +237,7 @@ class ANSI (term):
         self.state.add_transition ('?', 'ELB', None, 'MODECRAP')
         self.state.add_transition_list (string.digits, 'ELB', DoStartNumber, 'NUMBER_1')
         self.state.add_transition_list (string.digits, 'NUMBER_1', DoBuildNumber, 'NUMBER_1')
+        self.state.add_transition ('G', 'NUMBER_1', DoHoriz, 'INIT')
         self.state.add_transition ('D', 'NUMBER_1', DoBack, 'INIT')
         self.state.add_transition ('B', 'NUMBER_1', DoDown, 'INIT')
         self.state.add_transition ('C', 'NUMBER_1', DoForward, 'INIT')
